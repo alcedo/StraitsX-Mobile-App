@@ -99,16 +99,20 @@ export default function TransferOutScreen() {
         <Field label="Wallet source" value={walletSource} onChangeText={(value) => setWalletSource(value.toLowerCase() as typeof walletSource)} />
         {destinationType === 'bank' ? (
           <>
-            {data.bankAccounts.map((account) => (
-              <Row
-                key={account.id}
-                icon="account-balance"
-                title={account.attributes.accountHolderName}
-                detail={`${account.attributes.bank ?? account.attributes.swiftBic ?? 'Bank'} · ${account.attributes.status}`}
-                value={account.id === bankAccountId ? 'Selected' : undefined}
-                onPress={() => setBankAccountId(account.id)}
-              />
-            ))}
+            {data.bankAccounts.map((account) => {
+              const { accountHolderName, accountNo, bank, swiftBic, status } = account.attributes;
+              const bankLabel = [bank, swiftBic].filter(Boolean).join(' · ') || 'Unknown bank';
+              return (
+                <Row
+                  key={account.id}
+                  icon="account-balance"
+                  title={accountHolderName || 'Unnamed'}
+                  detail={`${bankLabel} · ${accountNo} · ${status}`}
+                  value={account.id === bankAccountId ? 'Selected' : undefined}
+                  onPress={() => setBankAccountId(account.id)}
+                />
+              );
+            })}
             {data.bankAccounts.length === 0 ? <Text style={styles.muted}>No bank accounts loaded. Refresh Home after adding an API key.</Text> : null}
           </>
         ) : (
@@ -134,7 +138,37 @@ export default function TransferOutScreen() {
       {reviewing ? (
         <Card tone="soft">
           <Text style={styles.heading}>Review</Text>
-          <Text style={styles.muted}>Destination: {destinationType === 'bank' ? bankAccountId : addressId}</Text>
+          {destinationType === 'bank' ? (
+            <>
+              {(() => {
+                const account = data.bankAccounts.find((a) => a.id === bankAccountId);
+                if (!account) return <Text style={styles.muted}>Bank account: {bankAccountId}</Text>;
+                const { accountHolderName, accountNo, bank, swiftBic } = account.attributes;
+                return (
+                  <>
+                    <Text style={styles.muted}>Holder: {accountHolderName || 'N/A'}</Text>
+                    <Text style={styles.muted}>Account: {accountNo}</Text>
+                    <Text style={styles.muted}>Bank: {[bank, swiftBic].filter(Boolean).join(' · ') || 'N/A'}</Text>
+                  </>
+                );
+              })()}
+            </>
+          ) : (
+            <>
+              {(() => {
+                const addr = blockchainAddresses.find((a) => a.data.id === addressId);
+                if (!addr) return <Text style={styles.muted}>Address: {addressId}</Text>;
+                const { address_label, blockchain_address, token, network } = addr.data.attributes;
+                return (
+                  <>
+                    <Text style={styles.muted}>Label: {address_label}</Text>
+                    <Text style={styles.muted}>Address: {blockchain_address}</Text>
+                    <Text style={styles.muted}>Token: {token.toUpperCase()} · {network}</Text>
+                  </>
+                );
+              })()}
+            </>
+          )}
           <Text style={styles.muted}>Amount: {walletSource.toUpperCase()} {amount}</Text>
           <View style={styles.actions}>
             <Button loading={loading} onPress={confirmTransfer} icon="check">
