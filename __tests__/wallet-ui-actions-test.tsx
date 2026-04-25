@@ -90,17 +90,28 @@ describe('wallet UI API actions in sandbox mode', () => {
     setAppState();
   });
 
-  test('settings test connection calls authorize hello in sandbox', async () => {
-    fetchMock.mockImplementationOnce(() => mockJson({ msg: 'Hello world' }));
+  test('settings test connection fetches balances from sandbox', async () => {
+    fetchMock.mockImplementationOnce(() =>
+      mockJson({
+        data: [
+          { id: '1', type: 'balance', attributes: { amount: '100.00', currency: 'XSGD' } },
+          { id: '2', type: 'balance', attributes: { amount: '50.00', currency: 'XUSD' } },
+        ],
+      }),
+    );
     const screen = render(<SettingsScreen />);
 
     fireEvent.press(screen.getByText('Test active key'));
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith(
-        'https://api-sandbox.straitsx.com/v1/authorize/hello',
+        'https://api-sandbox.straitsx.com/v1/merchant/account-balance',
         expect.objectContaining({ method: 'GET' }),
       );
+      expect(screen.getByText('XSGD')).toBeTruthy();
+      expect(screen.getByText('100.00 XSGD')).toBeTruthy();
+      expect(screen.getByText('XUSD')).toBeTruthy();
+      expect(screen.getByText('50.00 XUSD')).toBeTruthy();
     });
   });
 
@@ -123,7 +134,7 @@ describe('wallet UI API actions in sandbox mode', () => {
 
     const screen = render(<TransferInScreen />);
 
-    fireEvent.press(screen.getByText('Create bank details'));
+    fireEvent.press(screen.getByRole('button', { name: /Create bank details/ }));
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith(

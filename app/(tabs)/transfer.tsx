@@ -14,7 +14,7 @@ export default function TransferScreen() {
         <Row
           icon="south-west"
           title="Transfer in"
-          detail="Create virtual bank account details, persistent PayNow, or dynamic PayNow QR."
+          detail="Create virtual bank account details."
           onPress={() => router.push('/transfer-in')}
         />
         <Row
