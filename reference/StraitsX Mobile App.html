@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>StraitsX Mobile App — Hi-fi Design</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..600;1,6..72,300..600&family=Geist:wght@300..600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="tokens.css" />
+
+<style>
+  html, body, #root { margin: 0; padding: 0; }
+  body {
+    background: var(--bg-canvas);
+    color: var(--ink-1);
+    font-family: var(--sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  button { font: inherit; }
+  *::-webkit-scrollbar { width: 0; height: 0; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="primitives.jsx"></script>
+<script type="text/babel" src="screen-home.jsx"></script>
+<script type="text/babel" src="screen-transfer-in.jsx"></script>
+<script type="text/babel" src="screen-transfer-out.jsx"></script>
+<script type="text/babel" src="screen-misc.jsx"></script>
+
+<script type="text/babel">
+  const { useState } = React;
+  const { IOSDevice } = window;
+  const {
+    DesignCanvas, DCSection, DCArtboard,
+    HomeScreen, TransferInScreen, TransferOutScreen,
+    SwapScreen, HistoryScreen, AssetScreen, ProfileScreen,
+  } = window;
+
+  // Each artboard wraps a screen in its own iOS device frame, with local state for in-prototype navigation.
+  function Frame({ children }) {
+    return (
+      <IOSDevice width={402} height={874}>
+        {children}
+      </IOSDevice>
+    );
+  }
+
+  // For Home — interactive: tapping actions navigates within this frame
+  function HomeFrame() {
+    const [view, setView] = useState({ name: 'home', asset: null });
+    const back = () => setView({ name: 'home', asset: null });
+    return (
+      <Frame>
+        {view.name === 'home'   && <HomeScreen onNavigate={(n, a) => setView({ name: n, asset: a })} />}
+        {view.name === 'in'     && <TransferInScreen  onBack={back} />}
+        {view.name === 'out'    && <TransferOutScreen onBack={back} />}
+        {view.name === 'swap'   && <SwapScreen        onBack={back} />}
+        {view.name === 'history'&& <HistoryScreen     onBack={back} />}
+        {view.name === 'asset'  && <AssetScreen       onBack={back} asset={view.asset} />}
+      </Frame>
+    );
+  }
+
+  function App() {
+    return (
+      <DesignCanvas>
+        <DCSection id="dashboard" title="Dashboard"
+          subtitle="The home view — balance, quick actions, assets, activity. Tap an action to flow.">
+          <DCArtboard id="home" label="Home · interactive" width={402} height={874}>
+            <HomeFrame />
+          </DCArtboard>
+          <DCArtboard id="asset" label="Asset detail · XSGD" width={402} height={874}>
+            <Frame>
+              <AssetScreen onBack={() => {}} asset={{ sym: 'XSGD', name: 'StraitsX SGD', bal: 181.23, sgd: 181.23 }} />
+            </Frame>
+          </DCArtboard>
+          <DCArtboard id="profile" label="Profile · account" width={402} height={874}>
+            <Frame><ProfileScreen onBack={() => {}} /></Frame>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="in" title="Transfer In"
+          subtitle="Deposit funds — bank, crypto, or card. Interactive flow.">
+          <DCArtboard id="in-flow" label="Choose method · interactive" width={402} height={874}>
+            <Frame><TransferInScreen onBack={() => {}} /></Frame>
+          </DCArtboard>
+          <DCArtboard id="in-bank" label="Bank reference details" width={402} height={874}>
+            <Frame>
+              <PreviewIn step="bank" />
+            </Frame>
+          </DCArtboard>
+          <DCArtboard id="in-crypto" label="Crypto deposit · QR" width={402} height={874}>
+            <Frame>
+              <PreviewIn step="crypto" />
+            </Frame>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="out" title="Transfer Out"
+          subtitle="Send to a person, bank, or wallet. Multi-step interactive flow.">
+          <DCArtboard id="out-flow" label="Choose destination · interactive" width={402} height={874}>
+            <Frame><TransferOutScreen onBack={() => {}} /></Frame>
+          </DCArtboard>
+          <DCArtboard id="out-compose" label="Compose · on-chain" width={402} height={874}>
+            <Frame><PreviewOut step="compose" dest="chain" /></Frame>
+          </DCArtboard>
+          <DCArtboard id="out-review" label="Review · confirm send" width={402} height={874}>
+            <Frame><PreviewOut step="review" dest="user" /></Frame>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="swap-history" title="Swap & History"
+          subtitle="Stablecoin swap and the activity log.">
+          <DCArtboard id="swap" label="Swap · stable to stable" width={402} height={874}>
+            <Frame><SwapScreen onBack={() => {}} /></Frame>
+          </DCArtboard>
+          <DCArtboard id="history" label="History · grouped by day" width={402} height={874}>
+            <Frame><HistoryScreen onBack={() => {}} /></Frame>
+          </DCArtboard>
+        </DCSection>
+      </DesignCanvas>
+    );
+  }
+
+  // Pre-routed previews so each artboard lands on a specific step.
+  function PreviewIn({ step }) {
+    const Comp = TransferInScreen;
+    // Use a wrapped instance with initial step via React refs trick: simulate by mounting and then dispatching click.
+    // Simpler: render the inner sub-flow components directly via a shim.
+    return <ShimIn step={step} />;
+  }
+  function ShimIn({ step }) {
+    // Re-implement minimally using exported helpers — but easier: mount TransferInScreen and auto-advance via refs.
+    const ref = React.useRef(null);
+    const [ready, setReady] = useState(false);
+    React.useEffect(() => {
+      if (!ref.current) return;
+      // Find the matching method card by its kicker text and click
+      const targetKicker = step === 'bank' ? '01' : step === 'crypto' ? '02' : null;
+      if (!targetKicker) return setReady(true);
+      const buttons = ref.current.querySelectorAll('button');
+      for (const b of buttons) {
+        if (b.textContent.includes(targetKicker) && (
+          (step === 'bank' && b.textContent.includes('Bank')) ||
+          (step === 'crypto' && b.textContent.includes('Crypto'))
+        )) {
+          b.click();
+          break;
+        }
+      }
+      setReady(true);
+    }, [step]);
+    return <div ref={ref} style={{ height: '100%' }}><TransferInScreen onBack={() => {}} /></div>;
+  }
+
+  function PreviewOut({ step, dest }) {
+    const ref = React.useRef(null);
+    React.useEffect(() => {
+      if (!ref.current) return;
+      // Click destination
+      const buttons = ref.current.querySelectorAll('button');
+      const want = dest === 'user' ? 'StraitsX user' : dest === 'bank' ? 'bank account' : 'blockchain';
+      for (const b of buttons) {
+        if (b.textContent.includes(want)) { b.click(); break; }
+      }
+      if (step === 'compose') return;
+      // Fill in then click "Review transfer"
+      setTimeout(() => {
+        const inputs = ref.current.querySelectorAll('input');
+        if (inputs[0]) {
+          const setVal = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+          setVal.call(inputs[0], dest === 'chain' ? '0x4a1c…22f9' : dest === 'user' ? 'm.tan@hello.co' : '+65 9123 4567');
+          inputs[0].dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        if (inputs[1]) {
+          const setVal = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+          setVal.call(inputs[1], '120.50');
+          inputs[1].dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        setTimeout(() => {
+          const all = ref.current.querySelectorAll('button');
+          for (const b of all) {
+            if (b.textContent.toLowerCase().includes('review transfer')) { b.click(); break; }
+          }
+        }, 80);
+      }, 80);
+    }, [step, dest]);
+    return <div ref={ref} style={{ height: '100%' }}><TransferOutScreen onBack={() => {}} /></div>;
+  }
+
+  ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
